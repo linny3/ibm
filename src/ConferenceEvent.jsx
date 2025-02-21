@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import "./ConferenceEvent.css";
 import TotalCost from "./TotalCost";
-import { useSelector, useDispatch } from "react-redux";
+import { toggleMealSelection } from "./mealsSlice";
 import { incrementQuantity, decrementQuantity } from "./venueSlice";
+import { useSelector, useDispatch } from "react-redux";
 import { decrementAvQuantity, incrementAvQuantity } from "./avSlice";
 
 const ConferenceEvent = () => {
@@ -14,6 +15,7 @@ const ConferenceEvent = () => {
     const remainingAuditoriumQuantity = 3 - venueItems.find(item => item.name === "Auditorium Hall (Capacity:200)").quantity;
     const avTotalCost = calculateTotalCost("av");
     const mealsItems = useSelector((state) => state.meals);
+    const mealsTotalCost = calculateTotalCost("meals");
     
     
     const handleToggleItems = () => {
@@ -42,18 +44,77 @@ const ConferenceEvent = () => {
     };
 
     const handleMealSelection = (index) => {
-       
+       const item = mealsItems[index];
+       if (item.selected && item.type === "mealForPeople") {
+            // ensure numberOfPeople is set before toggling selection
+            const newNumberOfPeople = item.selected ? numberOfPeople : 0;
+            dispatch(toggleMealSelection(index, newNumberOfPeople));
+       }
+       else {
+        dispatch(toggleMealSelection(index));
+       }
     };
 
     const getItemsFromTotalCost = () => {
         const items = [];
+        venueItems.forEach((item) => {
+            if (item.quantity > 0) {
+                items.push({ ...item, type: "venue"});
+            }
+        });
+        avItems.forEach((item) => {
+            if (
+                item.quantity > 0 &&
+                !items.some((i) => i.name === item.name && i.type == "av")
+            ) {
+                items.push({ ...item, type: "av"});
+            }
+        });
+        mealsItems.forEach((item) => {
+            if (item.selected) {
+                const itemForDisplay = { ...item, type: "meals"};
+                if (item.numberOfPeople) {
+                    itemForDisplay.numberOfPeople = numberOfPeople;
+                }
+                items.push(itemForDisplay);
+            }
+        });
+        return items;
     };
 
     const items = getItemsFromTotalCost();
 
     const ItemsDisplay = ({ items }) => {
-
+        console.log(items);
+        return <>
+            <div className="display_box1">
+                {items.length === 0 && <p>No items selected</p>}
+                <table className="table_item_data">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Unit Cost</th>
+                            <th>Quantity</th>
+                            <th>Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {items.map((item, index) => (
+                            <tr key={index}>
+                                <td>{item.name}</td>
+                                <td>{item.cost}</td>
+                                <td>
+                                    {item.type === "meals" || item.numberOfPeople
+                                    ? ` For ${numberOfPeople} people` : item.quantity}
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </>
     };
+
     const calculateTotalCost = (section) => {
         let totalCost = 0;
         if (section === "venue") {
@@ -63,6 +124,12 @@ const ConferenceEvent = () => {
         } else if (section === "av") {
             avItems.forEach((item) => {
                 totalCost += item.cost * item.quantity;
+            });
+        } else if (section === "meals") {
+            mealsItems.forEach((item) => {
+                if (item.selected) {
+                    totalCost += item.cost * numberOfPeople;
+                }
             });
         }
         return totalCost;
@@ -75,6 +142,12 @@ const ConferenceEvent = () => {
             setShowItems(!showItems); // Toggle showItems to true only if it's currently false
           }
         }
+      }
+
+      const totalCosts = {
+        venue: venueTotalCost,
+        av: avTotalCost,
+        meals: mealsTotalCost,
       }
 
     return (
@@ -217,15 +290,16 @@ const ConferenceEvent = () => {
                                     </div>
                                 ))}
                                 </div>
-                                <div className="total_cost">Total Cost: </div>
+                                <div className="total_cost">Total Cost: {mealsTotalCost}</div>
 
 
                             </div>
                         </div>
                     ) : (
                         <div className="total_amount_detail">
-                            <TotalCost totalCosts={totalCost} handleClick={handleToggleItems} ItemsDisplay={() => <ItemsDisplay items={items} />} />
+                            <TotalCost totalCosts={ totalCosts } handleClick={handleToggleItems} ItemsDisplay={() => <ItemsDisplay items={items} />} />
                         </div>
+                        
                     )
                 }
 

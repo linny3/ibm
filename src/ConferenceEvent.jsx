@@ -11,11 +11,9 @@ const ConferenceEvent = () => {
     const [numberOfPeople, setNumberOfPeople] = useState(1);
     const venueItems = useSelector((state) => state.venue);
     const avItems = useSelector((state) => state.av);
+    const mealsItems = useSelector((state) => state.meals);
     const dispatch = useDispatch();
     const remainingAuditoriumQuantity = 3 - venueItems.find(item => item.name === "Auditorium Hall (Capacity:200)").quantity;
-    const avTotalCost = calculateTotalCost("av");
-    const mealsItems = useSelector((state) => state.meals);
-    const mealsTotalCost = calculateTotalCost("meals");
     
     
     const handleToggleItems = () => {
@@ -36,11 +34,11 @@ const ConferenceEvent = () => {
         }
       };
     const handleIncrementAvQuantity = (index) => {
-        dispatch(incrementAvQuantity);
+        dispatch(incrementAvQuantity(index));
     };
 
     const handleDecrementAvQuantity = (index) => {
-        dispatch(decrementAvQuantity);
+        dispatch(decrementAvQuantity(index));
     };
 
     const handleMealSelection = (index) => {
@@ -51,7 +49,7 @@ const ConferenceEvent = () => {
             dispatch(toggleMealSelection(index, newNumberOfPeople));
        }
        else {
-        dispatch(toggleMealSelection(index));
+            dispatch(toggleMealSelection(index));
        }
     };
 
@@ -107,6 +105,10 @@ const ConferenceEvent = () => {
                                     {item.type === "meals" || item.numberOfPeople
                                     ? ` For ${numberOfPeople} people` : item.quantity}
                                 </td>
+                                <td>{item.type === "meals" || item.numberOfPeople
+                                    ? `${item.cost * numberOfPeople}`
+                                    : `${item.cost * item.quantity}`}
+                                </td>
                             </tr>
                         ))}
                     </tbody>
@@ -134,21 +136,22 @@ const ConferenceEvent = () => {
         }
         return totalCost;
       };
-    const venueTotalCost = calculateTotalCost("venue");
-
-    const navigateToProducts = (idType) => {
-        if (idType == '#venue' || idType == '#addons' || idType == '#meals') {
-          if (showItems) { // Check if showItems is false
-            setShowItems(!showItems); // Toggle showItems to true only if it's currently false
-          }
+      const venueTotalCost = calculateTotalCost("venue");
+    const avTotalCost = calculateTotalCost("av");
+    const mealsTotalCost = calculateTotalCost("meals");
+        const navigateToProducts = (idType) => {
+            if (idType == '#venue' || idType == '#addons' || idType == '#meals') {
+                if (showItems) { // Check if showItems is false
+                    setShowItems(!showItems); // Toggle showItems to true only if it's currently false
+                }
+            }
         }
-      }
 
-      const totalCosts = {
-        venue: venueTotalCost,
-        av: avTotalCost,
-        meals: mealsTotalCost,
-      }
+        const totalCosts = {
+            venue: venueTotalCost,
+            av: avTotalCost,
+            meals: mealsTotalCost,
+        };
 
     return (
         <>
@@ -245,8 +248,9 @@ const ConferenceEvent = () => {
                                 {avItems.map((item, index) => (
                                     <div className="av_data venue_main" key={index}>
                                         <div className="img">
-                                        <img src={item.img} alt={item.name} />
-                                    </div>
+                                            <img src={item.img} alt={item.name} />
+                                        </div>
+                                    <div className="text">{item.name}</div>
                                     <div> ${item.cost} </div>
                                     <div className="addons_btn">
                                         <button className="btn-warning" onClick={() => handleDecrementAvQuantity(index)}> &ndash; </button>
